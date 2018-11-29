@@ -51,7 +51,7 @@ spec:
      - name: KIE_WORKBENCH_PASSWORD
        valueFrom:
           secretKeyRef:
-            name: kie-rules-secret
+            name: drools-secret
             key: kie_rules_workbench_password            
      - name: THIS_HOST_EXTERNAL_URL
        valueFrom:
@@ -63,7 +63,7 @@ spec:
      - name: KIE_PASSWORD
        valueFrom:
           secretKeyRef:
-            name: kie-rules-secret
+            name: drools-secret
             key: kie_rules_password            
      - name: JBOSS_BIND_ADDRESS
        value: "0.0.0.0"
