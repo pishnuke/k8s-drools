@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+   name: drools-integration-configmap
+   namespace: default
+data:
+   server_id: "kie-rules"     
+   kie_workbench_external_url: "https://somehost-wb.com/drools-wb"
+   this_host_external_domain: "somehost-server.com"     
