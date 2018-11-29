@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-    name: kie-rules-domain
+    name: drools-exec-domain
     namespace: default
 spec:
   selector:
-    name: kie-rules
+    name: drools-exec
   clusterIP: None
   ports:
   - port: 8180
