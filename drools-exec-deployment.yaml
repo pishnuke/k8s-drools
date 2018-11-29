@@ -1,0 +1,86 @@
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+ name: drools-exec
+ namespace: default
+spec:
+ serviceName: "drools-exec-domain"
+ replicas: 1
+ template:
+  metadata:
+    labels:
+      name: drools-exec
+  spec:
+   containers:
+   - name: drools-kie
+     imagePullPolicy: Always
+     image: jboss/kie-server:7.14.0.Final
+     command: ["/bin/sh", "-c"]
+     args:
+       - echo "COPY CONFIG";
+         sed -i "s/kieserver=.*/$KIE_USER=$KIE_PASSWORD/g" /opt/config/kie-server-users.properties;
+         sed -i "s/kieserver=.*/$KIE_USER=kie-server/g" /opt/config/kie-server-roles.properties;
+         cp -v /opt/config/*.* /opt/jboss/wildfly/standalone/configuration/;
+         export KIE_CONTROLLER_URL="$KIE_WORKBENCH_EXTERNAL_URL/drools-wb/rest/controller";
+         export KIE_SERVER_URL="$THIS_HOST_EXTERNAL_URL/kie-server/services/rest/server";
+         export KIE_CONTROLLER="-Dorg.kie.server.controller=$KIE_CONTROLLER_URL";
+         export KIE_SERVER="-Dorg.kie.server.location=$KIE_SERVER_URL";
+         export KIE_SERVER_ID="-Dorg.kie.server.id=$SERVER_ID";
+         export KIE_CONTROLLER_USER="-Dorg.kie.server.controller.user=$KIE_WORKBENCH_USER";
+         export KIE_CONTROLLER_PWD="-Dorg.kie.server.controller.pwd=$KIE_WORKBENCH_PASSWORD";
+         export KIE_MAVEN_REPO="$KIE_WORKBENCH_EXTERNAL_URL/drools-wb/maven2";
+         export JAVA_OPTS="$JAVAOPTS -Xmx3G";
+         export SERVER_OPTS="$SERVER_CONFIG $KIE_SERVER_USER $KIE_SERVER_PWD $KIE_CONTROLLER_USER $KIE_CONTROLLER_PWD $KIE_SERVER $KIE_CONTROLLER $KIE_SERVER_ID";
+         echo "STARTING";
+         ./standalone.sh -b $JBOSS_BIND_ADDRESS -c standalone-full.xml $SERVER_OPTS;              
+     ports:
+     - containerPort: 8180
+     env:
+     - name: SERVER_ID
+       valueFrom:
+          configMapKeyRef:
+            name: kie-rules-configmap
+            key: server_id    
+     - name: KIE_WORKBENCH_EXTERNAL_URL
+       valueFrom:
+          configMapKeyRef:
+            name: kie-rules-configmap
+            key: kie_workbench_external_url
+     - name: KIE_WORKBENCH_USER
+       value: "admin"     
+     - name: KIE_WORKBENCH_PASSWORD
+       valueFrom:
+          secretKeyRef:
+            name: kie-rules-secret
+            key: kie_rules_workbench_password            
+     - name: THIS_HOST_EXTERNAL_URL
+       valueFrom:
+          configMapKeyRef:
+            name: kie-rules-configmap
+            key: this_host_external_url
+     - name: KIE_USER
+       value: "kieserver"     
+     - name: KIE_PASSWORD
+       valueFrom:
+          secretKeyRef:
+            name: kie-rules-secret
+            key: kie_rules_password            
+     - name: JBOSS_BIND_ADDRESS
+       value: "0.0.0.0"
+     readinessProbe:
+        tcpSocket:
+            port: 8180
+        initialDelaySeconds: 30
+        periodSeconds: 20  
+     livenessProbe:
+        tcpSocket:
+            port: 8180
+        initialDelaySeconds: 30
+        periodSeconds: 5  
+     volumeMounts:
+      - name: config
+        mountPath: /opt/config
+   volumes:
+   - name: config
+     configMap:
+       name: kie-rules-configmap
