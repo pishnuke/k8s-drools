@@ -1,0 +1,52 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+ name: drools-wb
+ namespace: default
+spec:
+ replicas: 1
+ template:
+  metadata:
+   labels:
+    name: drools-wb
+    app: drools
+  spec:
+   securityContext:
+     fsGroup: 1000
+   hostNetwork: false
+   containers:
+   - name: drools-wb
+     imagePullPolicy: Always
+     image: jboss/drools-workbench:7.14.0.Final
+     env:
+     - name: MNT_VOLUME
+       value: "/opt/data"     
+     command: ["/bin/sh", "-c"]
+     args:
+       - echo "COPY CONFIG";
+         cp -v /opt/config/*.xml /opt/jboss/wildfly/standalone/configuration/;
+         mkdir -p $MNT_VOLUME/config;
+         cp -v -n /opt/config/*.properties $MNT_VOLUME/config/;
+         export JAVA_OPTS="$JAVAOPTS -Xmx3600M -Dorg.uberfire.nio.git.ssh.enabled=false -Derrai.bus.enable_sse_support=false -Dorg.uberfire.nio.git.dir=$MNT_VOLUME/git/ -Dorg.uberfire.metadata.index.dir=$MNT_VOLUME/index/ -Dorg.guvnor.m2repo.dir=$MNT_VOLUME/maven/";
+         ./start_drools-wb.sh;     
+     ports:
+     - containerPort: 8080
+     readinessProbe:
+      tcpSocket:
+        port: 8080
+      initialDelaySeconds: 60
+      periodSeconds: 20
+     securityContext: 
+       privileged: true 
+     volumeMounts:
+      - name: config
+        mountPath: /opt/config
+      - name: drools-wb-volume
+        mountPath: /opt/data
+   volumes:
+   - name: config
+     configMap:
+       name: drools-wb-configmap
+   - name: drools-wb-volume
+     persistentVolumeClaim:
+       claimName: drools-wb-volume-claim       
